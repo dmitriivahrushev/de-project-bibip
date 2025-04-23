@@ -18,24 +18,24 @@ class CarService:
 
     def add_model(self, model: Model) -> Model:
         """Добавление автомобилей и создание файла с индексами."""    
-        with open(self.model_path, mode='a', encoding='utf-8') as f:
-            f.write(f'{model.id}, {model.name}, {model.brand}\n')
-
-        with open(self.index_model, 'a', encoding='utf-8') as f:
+        with open(self.model_path, mode='a', encoding='utf-8') as file_model, \
+             open(self.index_model, 'a', encoding='utf-8') as file_index_model:
+            
+            file_model.write(f'{model.id}, {model.name}, {model.brand.ljust(500)}\n')
             num_lines = sum(1 for _ in open(self.model_path, 'r', encoding='utf-8'))  
-            f.write(f'{model.name}, {num_lines}\n')
-
+            file_index_model.write(f'{model.name}, {num_lines + 1}\n')
+            
 
     def add_car(self, car: Car) -> Car:
         """Добавление моделей и создание файла с индексами."""    
-        with open(self.car_path, 'a', encoding='utf-8') as f:
-            f.write(f'{car.vin}, {car.model}, {car.price}, {car.date_start}, {car.status}\n')
-
-        with open(self.index_car, 'a', encoding='utf-8') as f:
+        with open(self.car_path, 'a', encoding='utf-8') as file_cars, \
+             open(self.index_car, 'a', encoding='utf-8') as file_index_cars:
+            
+            file_cars.write(f'{car.vin}, {car.model}, {car.price}, {car.date_start}, {car.status.ljust(500)}\n')       
             num_lines = sum(1 for _ in open(self.car_path, 'r', encoding='utf-8'))  
-            f.write(f'{car.vin}, {num_lines}\n')
+            file_index_cars.write(f'{car.vin}, {num_lines + 1}\n')
 
-    
+        
     def sell_car(self, sale: Sale) -> Car:
         """Запись о продажах."""
         with open (self.sale_path, 'a', encoding='utf-8') as f:
