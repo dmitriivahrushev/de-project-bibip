@@ -19,6 +19,8 @@ class CarService:
         """Счётчик строк для файлов с индексами."""
         self.count_index_model = 0
         self.count_index_car = 0
+        self.count_index_sales = 0
+    
 
     def add_model(self, model: Model) -> Model:
         """Добавление автомобилей и создание файла с индексами."""    
@@ -40,39 +42,55 @@ class CarService:
         
     def sell_car(self, sale: Sale) -> Car:
         """Запись о продажах."""
-        with open (self.sale_path, 'a', encoding='utf-8') as f:
-            f.write(f'{sale.sales_number}, {sale.car_vin}, {sale.sales_date}, {sale.cost}\n')
-            
-        with open(self.index_sell, 'a', encoding='utf-8') as f:
-            num_lines = sum(1 for _ in open(self.sale_path, 'r', encoding='utf-8'))
-            f.write(f'{sale.sales_number}, {num_lines}\n')
+        with open (self.sale_path, 'a', encoding='utf-8') as file_sales, \
+             open(self.index_sell, 'a', encoding='utf-8') as file_index_sales:
+            file_sales.write(f'{sale.sales_number}, {sale.car_vin}, {sale.sales_date}, {str(sale.cost).ljust(500)}\n')
+            self.count_index_sales += 1            
+            file_index_sales.write(f'{sale.sales_number}, {self.count_index_sales}\n')
 
-        with open(self.index_sell, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-            row_number = lines[0].split(',')
-            row_val = int(row_number[1].strip()) - 1  
+        with open(self.index_sell, 'r', encoding='utf-8') as file_index_sales, \
+             open(self.sale_path, 'r', encoding='utf-8') as file_sales:
+            data_file_index_sales = file_index_sales.readlines()
+            for row_file_index_sales in data_file_index_sales:
+                parts_row = row_file_index_sales.strip().split(',')
+                sales_number_index_file = parts_row[0].strip()
+                row_number_index_file = int(parts_row[1].strip()) - 1
+                if sales_number_index_file == sale.sales_number:
+                    file_sales.seek(row_number_index_file * (501))
+                    row_file_sales = file_sales.read(500).strip().split(',')
+                    vin_file_sales = row_file_sales[1].strip() # Vin из файла с продажами
+                    break  
 
-        with open(self.sale_path, 'r', encoding='utf-8') as f:
-            all_lines = f.readlines()
-            parts = all_lines[row_val].strip().split(',')
-            vin = parts[1].strip()
-
-        with open(self.index_car, 'r', encoding='utf-8') as f:
-            all_lines = f.readlines()
-            for i in all_lines:
-                parts = i.strip().split(',')
-                current_vin = parts[0].strip()               
-                if vin == current_vin:
-                    row_number = int(parts[1].strip()) - 1
+                  # Доработать перезапись статуса на sold  
+        # with open(self.index_car, 'r', encoding='utf-8') as file_index_cars, \
+        #      open(self.car_path, 'r', encoding='utf-8') as file_cars:
+        #      data_file_index_cars = file_index_cars.readlines()
+        #      data_file_cars = file_cars.readlines()
+        #      for row_file_index_cars, row_data_file_cars in zip(data_file_index_cars, data_file_cars):
+        #          parts_row_index_cars = row_file_index_cars.strip().split(',')
+        #          parts_row_file_cars = row_data_file_cars.strip().split(',')
+        #          vin_file_index_cars = parts_row_index_cars[0].strip()
+        #          row_number_index_cars = int(parts_row_index_cars[1].strip()) - 1                
+        #          if vin_file_index_cars == vin_file_sales:
+        #              file_cars.seek(row_number_index_cars * (501))
+        #              row_file_cars = file_cars.read(500).strip().split(',')
+        #              status_car_file = row_file_cars[-1].strip()
+        #              status_car_file = ' sold'
+        #              data_file_cars[row_number_index_cars] = ','.join(row_file_cars) + '\n'
+        #              file_cars.seek(0)
+        #              file_cars.writelines(data_file_cars)
+        #              file_cars.truncate()
+        #              pass
+        
          
-        with open(self.car_path, 'r+', encoding='utf-8') as f:
-            all_lines = f.readlines()
-            parts = all_lines[row_number].strip().split(',')
-            parts[-1] = ' sold'  # Меняем статус на "sold"
-            all_lines[row_number] = ','.join(parts) + '\n'  
-            f.seek(0)
-            f.writelines(all_lines)
-            f.truncate() 
+        # with open(self.car_path, 'r+', encoding='utf-8') as f:
+        #     all_lines = f.readlines()
+        #     parts = all_lines[row_number].strip().split(',')
+        #     parts[-1] = ' sold'  # Меняем статус на "sold"
+        #     all_lines[row_number] = ','.join(parts) + '\n'  
+        #     f.seek(0)
+        #     f.writelines(all_lines)
+        #     f.truncate() 
           
     
     def get_cars(self, status: CarStatus) -> list[Car]:
