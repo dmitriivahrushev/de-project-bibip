@@ -7,34 +7,36 @@ class CarService:
     def __init__(self, root_directory_path: str) -> None:
         """Инициализирует объект класса CarService и устанавливает пути к необходимым файлам."""
         self.root_directory_path = root_directory_path
+
         self.sale_path = os.path.join(self.root_directory_path, 'sales.txt')
         self.model_path = os.path.join(self.root_directory_path, 'models.txt')
         self.index_model = os.path.join(self.root_directory_path, 'models_index.txt')
         self.car_path = os.path.join(self.root_directory_path, 'cars.txt')
         self.index_car = os.path.join(self.root_directory_path, 'cars_index.txt')
         self.index_sell = os.path.join(self.root_directory_path, 'sales_index.txt')
-        self.is_deleted = False # is_deleted (bool): Флаг, показывающий состояние удаления записи.
 
+        self.is_deleted = False # is_deleted (bool): Флаг, показывающий состояние удаления записи.
+        """Счётчик строк для файлов с индексами."""
+        self.count_index_model = 0
+        self.count_index_car = 0
 
     def add_model(self, model: Model) -> Model:
         """Добавление автомобилей и создание файла с индексами."""    
         with open(self.model_path, mode='a', encoding='utf-8') as file_model, \
-             open(self.index_model, 'a', encoding='utf-8') as file_index_model:
-            
+             open(self.index_model, 'a', encoding='utf-8') as file_index_model:                  
             file_model.write(f'{model.id}, {model.name}, {model.brand.ljust(500)}\n')
-            num_lines = sum(1 for _ in open(self.model_path, 'r', encoding='utf-8'))  
-            file_index_model.write(f'{model.name}, {num_lines + 1}\n')
+            self.count_index_model += 1
+            file_index_model.write(f'{model.name}, {self.count_index_model}\n')
             
-
+        
     def add_car(self, car: Car) -> Car:
         """Добавление моделей и создание файла с индексами."""    
         with open(self.car_path, 'a', encoding='utf-8') as file_cars, \
              open(self.index_car, 'a', encoding='utf-8') as file_index_cars:
-            
             file_cars.write(f'{car.vin}, {car.model}, {car.price}, {car.date_start}, {car.status.ljust(500)}\n')       
-            num_lines = sum(1 for _ in open(self.car_path, 'r', encoding='utf-8'))  
-            file_index_cars.write(f'{car.vin}, {num_lines + 1}\n')
-
+            self.count_index_car += 1
+            file_index_cars.write(f'{car.vin}, {self.count_index_car}\n')
+        
         
     def sell_car(self, sale: Sale) -> Car:
         """Запись о продажах."""
