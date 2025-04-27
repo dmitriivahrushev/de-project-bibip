@@ -80,10 +80,16 @@ class CarService:
                         date_start=row_file_cars[3].strip(),
                         status='sold'.strip()   
                     )
-                    """Перезапись новой строки"""
+                    """Перезапись новой строки
+                       row_number_index_car: Номер строки.
+                       Если строка самая первая то не ставим \n.
+                    """
                     formatted_new_car_data = f'{new_car_status.vin}, {new_car_status.model}, {new_car_status.price}, {new_car_status.date_start}, {new_car_status.status}'
                     file_cars.seek(row_number_index_car * 501)
-                    file_cars.write(f'\n{formatted_new_car_data.ljust(500)}')
+                    if row_number_index_car == 0:  
+                       file_cars.write(f'{formatted_new_car_data.ljust(500)}')
+                    else:  
+                        file_cars.write(f'\n{formatted_new_car_data.ljust(500)}')
             
                        
     def get_cars(self, status: CarStatus) -> list[Car]:
