@@ -21,6 +21,22 @@ class CarService:
         self.is_deleted = False # is_deleted (bool): Флаг, показывающий состояние удаления записи.
 
 
+    def search_index(self, path, search_row):
+        with open(path, 'r', encoding='utf-8') as file_index:
+            data_file = file_index.readlines()
+            for data_files in data_file:
+                parts_data = data_files.strip().split(',')
+                key_row = parts_data[0].strip()
+                index_row = int(parts_data[1].strip()) - 1 
+                if key_row == search_row and 'cars_index.txt' in path:
+                    return index_row
+                elif index_row + 1 == search_row and 'models_index.txt' in path:
+                    return index_row
+                elif search_row in key_row and 'sales_index.txt' in path:
+                    return index_row
+                    
+            
+
     def add_model(self, model: Model):
         """Добавление автомобилей и создание файла с индексами."""
         with open(self.model_path, mode='a', encoding='utf-8') as file_model, \
@@ -38,7 +54,7 @@ class CarService:
             self.count_index_car += 1
             file_index_cars.write(f'{car.vin}, {self.count_index_car}\n')
 
-
+#!!! Починить sell_car !!!
     def sell_car(self, sale: Sale):
         """Запись о продажах."""
         with open (self.sale_path, 'a', encoding='utf-8') as file_sales, \
@@ -115,59 +131,65 @@ class CarService:
         return available_cars
 
 
-    def get_car_info(self, vin: str) -> CarFullInfo | None:  
+    def get_car_info(self, vin: str):  
         """Вывод информацию о машине по VIN-коду."""
-        with open(self.index_car, 'r', encoding='utf-8') as f:
-            lines = f.readlines()        
-            for i in lines:
-                parts = i.strip().split(',')    
-                if vin == parts[0]:
-                    row_index_car = (int(parts[1]))
-                    break
-            else:
-                return None     
-   
-        with open(self.car_path, 'r', encoding='utf-8') as f_cars, \
-             open(self.model_path, 'r', encoding='utf-8') as f_model:
-            
-            f_model_lines = f_model.readlines()
-            f_cars_lines = f_cars.readlines()
-            search_parts_f_cars = f_cars_lines[row_index_car - 1].strip().split(',') 
-            key_model = int(search_parts_f_cars[1])
-            status_part = search_parts_f_cars[-1].strip()
-            search_parts_f_model = f_model_lines[key_model - 1] 
-                     
-            if status_part != 'sold':             
-                join_info_sold = ','.join(search_parts_f_cars + [search_parts_f_model]).split(',')                            
-                available_data = CarFullInfo(
-                        vin=join_info_sold[0].strip(),
-                        car_model_name=join_info_sold[6].strip(),
-                        car_model_brand=join_info_sold[7].strip(),
-                        price=join_info_sold[2].strip(),
-                        date_start=join_info_sold[3].strip(),
-                        status=CarStatus(join_info_sold[4].strip()),
+        row_index_car = self.search_index(self.index_car, vin) # Индекс авто.
+        """Читаем данные по индексу в cars"""
+        with open(self.car_path, 'r', encoding='utf-8') as file_cars:
+            file_cars.seek(row_index_car * 501)
+            file_car_part = file_cars.read(500).strip().split(',')
+            vin_car = file_car_part[0].strip() # vin для вывода инфы.
+            price = file_car_part[2].strip() # price для вывода инфы.
+            date_start = file_car_part[3].strip() # date_start для вывода инфы.
+            status = file_car_part[-1].strip() # status для вывода инфы.
+            model_id = int(file_car_part[1].strip())
+
+        row_index_model = self.search_index(self.index_model, model_id) # Индекс модели.
+
+        """Читаем данные по индексу в models""" 
+        with open(self.model_path, 'r', encoding='utf-8') as file_models:
+            file_models.seek(row_index_model * 501)
+            file_models_part = file_models.read(500).strip().split(',')
+            model_name = file_models_part[1].strip() # model_name для вывода инфы.
+            model_brand = file_models_part[2].strip() # model_brand для вывода инфы.
+
+        
+        if status != 'sold': # Автомобили которые еще не продали.
+            join_data = ''.join(f'{vin_car}, {model_name}, {model_brand}, {price}, {date_start}, {status}').split(',')
+            available_data = CarFullInfo(
+                        vin=join_data[0].strip(),
+                        car_model_name=join_data[1].strip(),
+                        car_model_brand=join_data[2].strip(),
+                        price=join_data[3].strip(),
+                        date_start=join_data[4].strip(),
+                        status=CarStatus(join_data[5].strip()),
                         sales_date=None,
                         sales_cost=None
                 )
-                return available_data
-            else:   
-                with open(self.sale_path, 'r', encoding='utf-8') as f_sales:
-                    f_sales_lines = f_sales.readlines()
-                    join_info_sold = ','.join(search_parts_f_cars + [search_parts_f_model]).split(',') 
-                    sold_raw_data = ','.join(join_info_sold + f_sales_lines).split(',')
-                    sold_data = CarFullInfo(
-                        vin=sold_raw_data[0].strip(),
-                        car_model_name=sold_raw_data[6].strip(),
-                        car_model_brand=sold_raw_data[7].strip(),
-                        price=sold_raw_data[2].strip(),
-                        date_start=sold_raw_data[3].strip(),
-                        status=CarStatus(sold_raw_data[4].strip()),
-                        sales_date=sold_raw_data[-2].strip(),
-                        sales_cost=sold_raw_data[-1].strip()
-                    )
-                    return sold_data
+            return available_data     
+        else: # Автомобили которые продали.
+            row_index_sale = self.search_index(self.index_sell, vin_car)
+            with open(self.sale_path, 'r', encoding='utf-8') as file_sales:
+                file_sales.seek(row_index_sale * (501))
+                file_sale_part = file_sales.read(500).strip().split(',')
+                sales_date = file_sale_part[2].strip() # sales_date для вывода инфы.
+                sales_cost = file_sale_part[-1].strip() # sales_cost для вывода инфы.
+                join_data = ''.join(f'{vin_car}, {model_name}, {model_brand}, {price}, {date_start}, {status}, {sales_date}, {sales_cost}').split(',')
+                sold_data = CarFullInfo(
+                        vin=join_data[0].strip(),
+                        car_model_name=join_data[1].strip(),
+                        car_model_brand=join_data[2].strip(),
+                        price=join_data[3].strip(),
+                        date_start=join_data[4].strip(),
+                        status=CarStatus(join_data[5].strip()),
+                        sales_date=join_data[6].strip(),
+                        sales_cost=join_data[7].strip()
+                )
+            return sold_data
+   
+     
                 
-                    
+                  
     def update_vin(self, vin: str, new_vin: str) -> Car:
         """Перезапись VIN-кода на корректный."""
         with open(self.index_car, 'r', encoding='utf-8') as f:
