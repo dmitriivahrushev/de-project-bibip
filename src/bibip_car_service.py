@@ -130,6 +130,9 @@ class CarService:
     def get_car_info(self, vin: str):  
         """Вывод информацию о машине по VIN-коду."""
         row_index_car = self.search_index(self.index_car, vin) # Индекс авто.
+        if row_index_car is None: return None
+        else: pass
+
         """Читаем данные по индексу в cars"""
         with open(self.car_path, 'r', encoding='utf-8') as file_cars:
             file_cars.seek(row_index_car * 501)
@@ -183,35 +186,35 @@ class CarService:
                 )
             return sold_data
    
-     
-                
-                  
+                                 
     def update_vin(self, vin: str, new_vin: str) -> Car:
         """Перезапись VIN-кода на корректный."""
-        with open(self.index_car, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-            for i in lines:
-                parts_vin = i.strip().split(',')
-                if vin == parts_vin[0]:
-                    row_number = int(parts_vin[1]) - 1
-                    with open(self.car_path, 'r+', encoding='utf-8') as f:
-                         lines = f.readlines()
-                         parts = lines[row_number].strip().split(',')
-                         parts[0] = new_vin  
-                         lines[row_number] = ','.join(parts) + '\n'  
-                         f.seek(0)
-                         f.writelines(lines)
-                         f.truncate() 
+        row_index_car = self.search_index(self.index_car, vin)
+        pass
+        # with open(self.index_car, 'r', encoding='utf-8') as f:
+        #     lines = f.readlines()
+        #     for i in lines:
+        #         parts_vin = i.strip().split(',')
+        #         if vin == parts_vin[0]:
+        #             row_number = int(parts_vin[1]) - 1
+        #             with open(self.car_path, 'r+', encoding='utf-8') as f:
+        #                  lines = f.readlines()
+        #                  parts = lines[row_number].strip().split(',')
+        #                  parts[0] = new_vin  
+        #                  lines[row_number] = ','.join(parts) + '\n'  
+        #                  f.seek(0)
+        #                  f.writelines(lines)
+        #                  f.truncate() 
 
-                    with open(self.index_car, 'r+', encoding='utf-8') as f:
-                         lines = f.readlines()
-                         parts_vin = i.strip().split(',')
-                         parts = lines[row_number].strip().split(',')
-                         parts[0] = new_vin  
-                         lines[row_number] = ','.join(parts) + '\n'  
-                         f.seek(0)
-                         f.writelines(lines)
-                         f.truncate() 
+        #             with open(self.index_car, 'r+', encoding='utf-8') as f:
+        #                  lines = f.readlines()
+        #                  parts_vin = i.strip().split(',')
+        #                  parts = lines[row_number].strip().split(',')
+        #                  parts[0] = new_vin  
+        #                  lines[row_number] = ','.join(parts) + '\n'  
+        #                  f.seek(0)
+        #                  f.writelines(lines)
+        #                  f.truncate() 
 
 
     def revert_sale(self, sales_number: str) -> Car:
