@@ -21,19 +21,20 @@ class CarService:
         self.is_deleted = False # is_deleted (bool): Флаг, показывающий состояние удаления записи.
 
 
-    def search_index(self, path, search_row):
+    def search_index(self, path, search_row):    
         with open(path, 'r', encoding='utf-8') as file_index:
             data_file = file_index.readlines()
             for data_files in data_file:
                 parts_data = data_files.strip().split(',')
                 key_row = parts_data[0].strip()
                 index_row = int(parts_data[1].strip()) - 1 
-                if key_row == search_row and 'cars_index.txt' in path:
+                if 'cars_index.txt' in path and key_row == search_row:
                     return index_row
-                elif index_row + 1 == search_row and 'models_index.txt' in path:
+                elif 'models_index.txt' in path and index_row + 1 == search_row:
                     return index_row
-                elif search_row in key_row and 'sales_index.txt' in path:
-                    return index_row
+                elif 'sales_index.txt' in path and search_row in key_row:
+                     return index_row
+        
                     
             
 
@@ -54,7 +55,7 @@ class CarService:
             self.count_index_car += 1
             file_index_cars.write(f'{car.vin}, {self.count_index_car}\n')
 
-#!!! Починить sell_car !!!
+
     def sell_car(self, sale: Sale):
         """Запись о продажах."""
         with open (self.sale_path, 'a', encoding='utf-8') as file_sales, \
