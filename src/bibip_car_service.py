@@ -1,28 +1,33 @@
 import os
 from decimal import Decimal
-from models import Car, CarFullInfo, CarStatus, Model, ModelSaleStats, Sale
+from models import Car, CarFullInfo, CarStatus, Model, ModelSaleStats, Sale, CarIndex
 
 
 class CarService:
     def __init__(self, root_directory_path: str) -> None:
         """Инициализирует объект класса CarService и устанавливает пути к необходимым файлам."""
         self.root_directory_path = root_directory_path
-        """Пути сохранения файлов"""
+
+        """Пути хранения файлов"""
         self.sale_path = os.path.join(self.root_directory_path, 'sales.txt')
         self.model_path = os.path.join(self.root_directory_path, 'models.txt')
         self.index_model = os.path.join(self.root_directory_path, 'models_index.txt')
         self.car_path = os.path.join(self.root_directory_path, 'cars.txt')
         self.index_car = os.path.join(self.root_directory_path, 'cars_index.txt')
-        self.index_sell = os.path.join(self.root_directory_path, 'sales_index.txt')      
+        self.index_sell = os.path.join(self.root_directory_path, 'sales_index.txt')   
+
         """Счётчик строк для файлов с индексами."""
         self.count_index_model = 0
         self.count_index_car = 0
         self.count_index_sales = 0
+
         self.is_deleted = False # is_deleted (bool): Флаг, показывающий состояние удаления записи.
 
 
-    def search_index(self, path, search_row):
-        """Поиск номера строки в файле с индексом."""    
+    def search_index(self, path: str, search_row: str):
+        """Поиск номера строки в файле с индексом.
+           return: номер строки в которой распологается запись в основном файле.txt. 
+        """    
         with open(path, 'r', encoding='utf-8') as file_index:
             data_file = file_index.readlines()
             for data_files in data_file:
@@ -37,8 +42,10 @@ class CarService:
                      return index_row
         
                               
-    def add_model(self, model: Model):
-        """Добавление автомобилей и создание файла с индексами."""
+    def add_model(self, model: Model) -> None:
+        """Пишем данные в models.txt,
+           Пишем данные в models_index.txt
+        """
         with open(self.model_path, mode='a', encoding='utf-8') as file_model, \
              open(self.index_model, 'a', encoding='utf-8') as file_index_model:                  
             file_model.write(f'{model.id}, {model.name}, {model.brand.ljust(500)}\n')
@@ -46,8 +53,10 @@ class CarService:
             file_index_model.write(f'{model.name}, {self.count_index_model}\n')
 
 
-    def add_car(self, car: Car):
-        """Добавление моделей и создание файла с индексами."""    
+    def add_car(self, car: Car) -> None:
+        """Пишем данные в cars.txt,
+           Пишем данные в models_index.txt
+        """    
         with open(self.car_path, 'a', encoding='utf-8') as file_cars, \
              open(self.index_car, 'a', encoding='utf-8') as file_index_cars:
             file_cars.write(f'{car.vin}, {car.model}, {car.price}, {car.date_start}, {car.status.ljust(500)}\n')       
@@ -55,8 +64,10 @@ class CarService:
             file_index_cars.write(f'{car.vin}, {self.count_index_car}\n')
 
 
-    def sell_car(self, sale: Sale):
-        """Запись о продажах."""
+    def sell_car(self, sale: Sale) -> None:
+        """Пишем данные в sales.txt,
+           Пишем данные в sales_index.txt
+        """
         with open (self.sale_path, 'a', encoding='utf-8') as file_sales, \
              open(self.index_sell, 'a', encoding='utf-8') as file_index_sales:
             file_sales.write(f'{sale.sales_number}, {sale.car_vin}, {sale.sales_date}, {str(sale.cost).ljust(500)}\n')
@@ -88,6 +99,7 @@ class CarService:
                     row_number_index_car = int(parst_row_index_file[1].strip()) - 1 
                     file_cars.seek(row_number_index_car * (501)) 
                     row_file_cars = file_cars.read(500).strip().split(',')
+
                     """Собираем обьект с новым статусом"""
                     new_car_status = Car(
                         vin=row_file_cars[0].strip(),
@@ -96,6 +108,7 @@ class CarService:
                         date_start=row_file_cars[3].strip(),
                         status='sold'.strip()   
                     )
+
                     """Перезапись новой строки
                        row_number_index_car: Номер строки.
                        Если строка самая первая то не ставим \n.
@@ -127,8 +140,8 @@ class CarService:
             return available_cars
         
 
-    def get_car_info(self, vin: str):  
-        """Вывод информацию о машине по VIN-коду."""
+    def get_car_info(self, vin: str) -> CarFullInfo:  
+        """Вывод полной информации о машине по VIN-коду."""
         row_index_car = self.search_index(self.index_car, vin) # Индекс авто.
         if row_index_car is None: return None
         else: pass
@@ -187,36 +200,55 @@ class CarService:
             return sold_data
    
                                  
-    def update_vin(self, vin: str, new_vin: str) -> Car:
+    def update_vin(self, vin: str, new_vin: str) -> None:
         """Перезапись VIN-кода на корректный."""
         row_index_car = self.search_index(self.index_car, vin)
-        pass
-        # with open(self.index_car, 'r', encoding='utf-8') as f:
-        #     lines = f.readlines()
-        #     for i in lines:
-        #         parts_vin = i.strip().split(',')
-        #         if vin == parts_vin[0]:
-        #             row_number = int(parts_vin[1]) - 1
-        #             with open(self.car_path, 'r+', encoding='utf-8') as f:
-        #                  lines = f.readlines()
-        #                  parts = lines[row_number].strip().split(',')
-        #                  parts[0] = new_vin  
-        #                  lines[row_number] = ','.join(parts) + '\n'  
-        #                  f.seek(0)
-        #                  f.writelines(lines)
-        #                  f.truncate() 
 
-        #             with open(self.index_car, 'r+', encoding='utf-8') as f:
-        #                  lines = f.readlines()
-        #                  parts_vin = i.strip().split(',')
-        #                  parts = lines[row_number].strip().split(',')
-        #                  parts[0] = new_vin  
-        #                  lines[row_number] = ','.join(parts) + '\n'  
-        #                  f.seek(0)
-        #                  f.writelines(lines)
-        #                  f.truncate() 
+        """Обновляем vin в файле cars.txt"""
+        with open(self.car_path, 'r+', encoding='utf-8') as file_cars:
+            file_cars.seek(row_index_car * (501))
+            file_cars_parts = file_cars.read(500).strip().split(',')
+            new_car_vin = Car(
+                        vin=new_vin.strip(), # Подставляем новый Vin.
+                        model=file_cars_parts[1].strip(),
+                        price=file_cars_parts[2].strip(),
+                        date_start=file_cars_parts[3].strip(),
+                        status=file_cars_parts[4].strip()   
+                        )
+            formatted_new_car_data = f'{new_car_vin.vin}, {new_car_vin.model}, {new_car_vin.price}, {new_car_vin.date_start}, {new_car_vin.status}'
+            file_cars.seek(row_index_car * 501)
+            if row_index_car == 0:  
+                file_cars.write(f'{formatted_new_car_data.ljust(500)}')
+            else:  
+                file_cars.write(f'\n{formatted_new_car_data.ljust(500)}')
+        
+        """Собираем новые данные для записи в cars_index.txt"""
+        with open(self.index_car, 'r', encoding='utf-8') as file_index_cars:
+            data_index_car = file_index_cars.readlines()
+            new_data_index_car = []
+            for data_index_cars in data_index_car:
+                parts_index_car = data_index_cars.strip().split(',')
+                vin_index_car = parts_index_car[0].strip()
+                row_index_car = parts_index_car[1].strip()
+                if vin_index_car == vin:
+                    data = CarIndex(
+                        vin=new_vin.strip(), # Подставляем новый Vin.
+                        row_number=row_index_car.strip()
+                    )
+                    new_data_index_car.append(data)
+                else:
+                    data = CarIndex(
+                        vin=vin_index_car.strip(),
+                        row_number=row_index_car.strip()
+                    )
+                    new_data_index_car.append(data)
 
-
+        """Пишем новые данные в cars_index.txt"""
+        with open(self.index_car, 'w', encoding='utf-8') as file_index_cars:
+             for i in new_data_index_car:
+                 file_index_cars.write(f'{i.vin}, {i.row_number}\n')
+            
+     #Исправить последние 2 метода!          
     def revert_sale(self, sales_number: str) -> Car:
         """Удаление записи из таблицы продаж и замена статуса для машины."""
         with open(self.index_sell, 'r', encoding='utf-8') as f:

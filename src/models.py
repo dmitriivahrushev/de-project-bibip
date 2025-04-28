@@ -57,3 +57,8 @@ class ModelSaleStats(BaseModel):
     car_model_name: str
     brand: str
     sales_number: int
+
+
+class CarIndex(BaseModel):
+    vin: str
+    row_number:str
