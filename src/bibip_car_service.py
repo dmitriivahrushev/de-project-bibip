@@ -21,7 +21,8 @@ class CarService:
         self.is_deleted = False # is_deleted (bool): Флаг, показывающий состояние удаления записи.
 
 
-    def search_index(self, path, search_row):    
+    def search_index(self, path, search_row):
+        """Поиск номера строки в файле с индексом."""    
         with open(path, 'r', encoding='utf-8') as file_index:
             data_file = file_index.readlines()
             for data_files in data_file:
@@ -35,9 +36,7 @@ class CarService:
                 elif 'sales_index.txt' in path and search_row in key_row:
                      return index_row
         
-                    
-            
-
+                              
     def add_model(self, model: Model):
         """Добавление автомобилей и создание файла с индексами."""
         with open(self.model_path, mode='a', encoding='utf-8') as file_model, \
@@ -111,26 +110,22 @@ class CarService:
                        
     def get_cars(self, status: CarStatus) -> list[Car]:
         """Вывод машин, доступных к продаже."""
-        raw_cars = []
+        available_cars = []
         with open(self.car_path, 'r', encoding='utf-8') as file_cars:
             for row_file_cars in file_cars:            
-                parts = row_file_cars.strip().split(',')
-                car_status = parts[-1].strip()
+                file_cars = row_file_cars.strip().split(',')
+                car_status = file_cars[-1].strip()
                 if car_status == 'available':
-                    raw_cars.append(parts)
-
-        available_cars = []
-        for raw_item in raw_cars:
-            car_data = {
-                "vin": raw_item[0],
-                "model": int(raw_item[1]),
-                "price": raw_item[2],
-                "date_start": raw_item[3].strip(),
-                "status": CarStatus(raw_item[4].strip()),
-                }
-            available_cars.append(Car(**car_data))
-        return available_cars
-
+                    car_data = {
+                        "vin": file_cars[0].strip(),
+                        "model": int(file_cars[1]),
+                        "price": file_cars[2].strip(),
+                        "date_start": file_cars[3].strip(),
+                        "status": CarStatus(file_cars[4].strip()),
+                    }
+                    available_cars.append(Car(**car_data))
+            return available_cars
+        
 
     def get_car_info(self, vin: str):  
         """Вывод информацию о машине по VIN-коду."""
