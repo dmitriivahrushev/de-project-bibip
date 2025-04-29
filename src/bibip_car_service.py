@@ -21,9 +21,7 @@ class CarService:
         self.count_index_car = 0
         self.count_index_sales = 0
 
-        self.is_deleted = False # is_deleted (bool): Флаг, показывающий состояние удаления записи.
-
-
+       
     def search_index(self, path: str, search_row: str):
         """Поиск номера строки в файле с индексом.
            return: номер строки в которой распологается запись в основном файле.txt. 
@@ -248,45 +246,41 @@ class CarService:
              for i in new_data_index_car:
                  file_index_cars.write(f'{i.vin}, {i.row_number}\n')
             
-     #Исправить последние 2 метода!          
-    def revert_sale(self, sales_number: str) -> Car:
+              
+    def revert_sale(self, sales_number: str):
         """Удаление записи из таблицы продаж и замена статуса для машины."""
-        with open(self.index_sell, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-            for i in lines:
-                parts = i.strip().split(',')
-                if parts[0] == sales_number:
-                    row_index_sales = int(parts[1]) - 1
-                    break
+        index_sales = self.search_index(self.index_sell, sales_number)
+        with open(self.sale_path, 'r+', encoding='utf-8') as file_sales:
+            file_sales.seek(index_sales * (501))
+            row_sales = file_sales.read(500).strip().split(',')
+            vin_car = row_sales[1].strip()
+            file_sales.seek(index_sales * (501))
+            result_row = ','.join(row_sales) + ' -> Deleted'
+            if index_sales == 0:
+                file_sales.write(result_row.ljust(500))
             else:
-                return None
+                file_sales.write(f'\n{result_row.ljust(500)}')
         
-        with open(self.sale_path, 'r', encoding='utf-8') as f:
-            lines = f.readlines()
-            sale_number = lines[row_index_sales].strip().split(',')
-            vin = sale_number[1].strip()
-            if sale_number[0] == sales_number and self.is_deleted == False:
-                self.is_deleted = True
+        row_index_car = self.search_index(self.index_car, vin_car)
+        
+        with open(self.car_path, 'r+', encoding='utf-8') as file_cars:
+            file_cars.seek(row_index_car * (501))
+            row_car = file_cars.read(500).strip().split(',')
+            result_car = Car(
+                vin=row_car[0].strip(),
+                model=row_car[1].strip(),
+                price=row_car[2].strip(),
+                date_start=row_car[3].strip(),
+                status='available'
+            )
+            formated_data = f'{result_car.vin}, {result_car.model}, {result_car.price}, {result_car.date_start}, {result_car.status}'
+            file_cars.seek(row_index_car * (501))
+            if row_index_car == 0:
+                file_cars.write(formated_data.ljust(500))
+            else:
+                file_cars.write(f'\n{formated_data.ljust(500)}')
 
-                with open(self.index_car, 'r', encoding='utf-8') as f:
-                    all_lines = f.readlines()                   
-                    for i in all_lines:
-                        parts = i.strip().split(',')
-                        current_vin = parts[0].strip()           
-                        if vin == current_vin:
-                            row_number = int(parts[1].strip()) - 1
-                        break
-          
-                with open(self.car_path, 'r+', encoding='utf-8') as f:
-                    all_lines = f.readlines()
-                    parts = all_lines[row_number].strip().split(',')
-                    parts[-1] = ' available'  
-                    all_lines[row_number] = ','.join(parts) + '\n'  
-                    f.seek(0)
-                    f.writelines(all_lines)
-                    f.truncate() 
-            
-                 
+               
     def top_models_by_sales(self) -> list[ModelSaleStats]: 
         """Вывод самых продаваемых моделей"""    
         sales_stats: dict[int, int] = {}
