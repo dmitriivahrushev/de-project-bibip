@@ -1,6 +1,7 @@
 import os
 from decimal import Decimal
 from models import Car, CarFullInfo, CarStatus, Model, ModelSaleStats, Sale, CarIndex
+import pandas as pd
 
 
 class CarService:
@@ -281,74 +282,91 @@ class CarService:
                 file_cars.write(f'\n{formated_data.ljust(500)}')
 
                
-    def top_models_by_sales(self) -> list[ModelSaleStats]: 
-        """Вывод самых продаваемых моделей"""    
-        sales_stats: dict[int, int] = {}
-        vin_to_model: dict[str, int] = {}
-
-        with open(self.car_path, 'r', encoding='utf-8') as cars_file:
-            for line in cars_file:
-                parts = line.strip().split(',')
-                vin_to_model[parts[0]] = int(parts[1])
-
-        with open(self.sale_path, 'r', encoding='utf-8') as sales_file:
-            for line in sales_file:
-                parts = line.strip().split(',')
-                vin = parts[1].strip()  
-                if vin in vin_to_model:
-                    model_id = vin_to_model[vin]
-                    sales_stats[model_id] = sales_stats.get(model_id, 0) + 1
-                else:
-                    print(f"Внимание! VIN '{vin}' не найден в файле cars.txt")
-
-        model_prices: dict[int, Decimal] = {}
-
-        with open(self.car_path, 'r', encoding='utf-8') as cars_file:
-            for line in cars_file:
-                parts = line.strip().split(',')
-                model_id = int(parts[1])
-                price = Decimal(parts[2])
-                if model_id not in model_prices or price > model_prices[model_id]:
-                    model_prices[model_id] = price
-
-        sorted_models: list[int] = sorted(
-            sales_stats.keys(),
-            key=lambda x: (-sales_stats[x], -model_prices.get(x, Decimal(0)))
-        )[:3]
-
-        result = []
-        model_index = {}
-
-        if os.path.exists(self.index_model):
-            with open(self.index_model, 'r', encoding='utf-8') as index_file:
-                for line in index_file:
-                    parts = line.strip().split(',')
-                    model_index[parts[0]] = int(parts[1])
-
-        with open(self.model_path, 'r', encoding='utf-8') as models_file:
-            models_data = models_file.readlines()
-        for model_id in sorted_models:
-            model_data = None
-            if model_data is None:
-                for line in models_data:
-                    parts = line.strip().split(',')
-                    if len(parts) >= 3 and int(parts[0]) == model_id:
-                        model_data = line.strip()
-                        break
-                parts = model_data.split(',')
-                if len(parts) >= 3:
-                    result.append(ModelSaleStats(
-                        car_model_name=parts[1].strip(),
-                        brand=parts[2].strip(),
-                        sales_number=sales_stats[model_id]
-                    ))
-        return result
-
-
+    def top_models_by_sales(self): 
+        """Вывод самых продаваемых моделей"""
+        """Получаем Vin и цену продажи авто
+           в saled_car: list
+        """
+        saled_car = [] # Vin и Цена проданных авто.
+        with open(self.sale_path, 'r', encoding='utf-8') as file_sales: 
+            for i in file_sales:
+                parts = i.strip().split(',')
+                vin_car = parts[1].strip()
+                cost_car = parts[-1].strip()
+                data_sales = f'{vin_car}, {cost_car}'
+                saled_car.append(data_sales)
         
+        """Читаем Id модели и цену продажи авто
+           в model_cost: list
+        """
+        model_cost = [] # id модели, цена продажи.
+        with open(self.car_path, 'r', encoding='utf-8') as file_car:
+            for saled_cars in saled_car:
+                parts = saled_cars.split(',')
+                vin_car_sales = parts[0].strip()
+                cost_car = float(parts[1]) # Цена продажи
+
+                index_cars = self.search_index(self.index_car, vin_car_sales) # Индекс искомых машин.
+
+                """Читаем только искомые строки в файле cars."""
+                file_car.seek(index_cars * 501)
+                row_car = file_car.read(500)
+                parts = row_car.strip().split(',')
+                vin_car_cars = parts[0] # Вин для сравнения.
+                model_car_cars = parts[1] # Id модели.
+                if vin_car_sales == vin_car_cars:
+                    data_model_cost = f'{model_car_cars.strip()}, {float(cost_car)}'
+                    model_cost.append(data_model_cost)
         
+        """Читаем данные для посчета лидеров продаж
+           в raw_data: list.
+        """
+        raw_data = []
+        with open(self.model_path, 'r', encoding='utf-8') as file_model:
+            for model_costs in model_cost:
+                parts = model_costs.strip().split(',')
+                model_car_id = int(parts[0])
+                car_price = float(parts[1]) # Цена продажи.
+                
+                row_number_models = self.search_index(self.index_model, model_car_id)
+                
+                file_model.seek(row_number_models * (501))
+                row_model = file_model.read(500)
+                parts = row_model.strip().split(',')
+                id_f_model = str(model_car_id)
+                car_model_name = parts[-1].strip() # Название модели.
+                brand = parts[1].strip() # Бренд производителя.
+                if id_f_model == id_f_model:
+                    append_data = f'{car_model_name}, {brand}, {car_price}'
+                    raw_data.append(append_data)
         
-            
+        """Считаем лидеров продаж."""
+        parsed_data = []
+        for i in raw_data:
+            brand, model, sales = i.split(',')
+            parsed_data.append([brand.strip(), model.strip(), float(sales)])
+
+        df = pd.DataFrame(parsed_data, columns=['Brand', 'Model', 'Sales'])
+        agg_result = df.groupby(['Brand', 'Model'], as_index=False).agg({'Sales': ['count', 'sum']})
+        agg_result.columns = ['Brand', 'Model', 'Count', 'Total_Sales']
+        top_leaders = agg_result.sort_values(by=['Count', 'Total_Sales'], ascending=[False, False]).head(3)
+        result_list = []
+        for _, row in top_leaders.iterrows():
+            result_list.append([row['Brand'], row['Model'], row['Count'], row['Total_Sales']])
+        
+        """Итоговый результат."""
+        top_3_models = []
+        top_count = 4
+        for i in result_list:           
+            top_count -= 1
+            top_data = ModelSaleStats(
+                car_model_name=i[1].strip(),
+                brand=i[0].strip(),
+                sales_number=top_count
+            )
+            top_3_models.append(top_data)
+        return top_3_models
+
             
         
                     
